@@ -300,18 +300,11 @@ function render(){
   document.getElementById("routeLinks").innerHTML = "";
 }
 
-function buildGoogleMapsUrl(addresses) {
-  if (addresses.length === 0) return null;
-  if (addresses.length === 1) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addresses[0])}`;
-  }
-  const origin = encodeURIComponent(addresses[0]);
-  const destination = encodeURIComponent(addresses[addresses.length - 1]);
-  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
-  if (addresses.length > 2) {
-    url += "&waypoints=" + addresses.slice(1, -1).map(encodeURIComponent).join("|");
-  }
-  return url;
+function buildGoogleMapsUrl(addrs) {
+  // Use slash-path format: maps.google.com/maps/dir/A/B/C
+  // This is the most reliable format on mobile browsers
+  const parts = addrs.map(a => encodeURIComponent(a));
+  return "https://maps.google.com/maps/dir/" + parts.join("/");
 }
 
 function makeRoute(){
@@ -321,12 +314,19 @@ function makeRoute(){
   }
 
   // Sort all addresses: basket 3 first, then 2, then 1
-  const sorted = [...data].sort((a, b) => b.basket - a.basket);
+  // Within same basket: sort by mapName asc, then house number asc
+  const sorted = [...data].sort((a, b) => {
+    if (b.basket !== a.basket) return b.basket - a.basket;
+    const nameA = (streets[a.street]?.mapName || a.street).toLowerCase();
+    const nameB = (streets[b.street]?.mapName || b.street).toLowerCase();
+    if (nameA !== nameB) return nameA < nameB ? -1 : 1;
+    return Number(a.house) - Number(b.house);
+  });
 
   // Convert to map address strings
   const allAddresses = sorted.map(item => ({
     label: `${item.street} ${item.house}${item.flat ? "/" + item.flat : ""}`,
-    mapAddr: `${streets[item.street]?.mapName || item.street} ${item.house}, Warszawa, Poland`,
+    mapAddr: `${streets[item.street]?.mapName || item.street} ${item.house} Warszawa`,
     basket: item.basket
   }));
 
@@ -347,6 +347,7 @@ function makeRoute(){
 
   chunks.forEach((chunk, idx) => {
     const url = buildGoogleMapsUrl(chunk.map(a => a.mapAddr));
+
     const firstBasket = chunk[0].basket;
     const lastBasket = chunk[chunk.length - 1].basket;
 
