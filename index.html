@@ -5,10 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Karta Kurier</title>
 <style>
-body { font-family: Arial; margin: 10px; }
-input, button { font-size: 18px; padding: 10px; margin: 5px 0; width: 100%; }
-.street { padding: 8px; border-bottom: 1px solid #ddd; cursor: pointer; }
-.box { margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
+body {
+  font-family: Arial;
+  margin: 10px;
+  background: #4b0f16;
+  color: #fff;
+}
+
+input, button {
+  font-size: 18px;
+  padding: 10px;
+  margin: 5px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.box {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #aaa;
+  background: rgba(255,255,255,0.05);
+}
+
+.street {
+  padding: 8px;
+  border-bottom: 1px solid #666;
+  cursor: pointer;
+  background: rgba(255,255,255,0.08);
+}
+
+#streetList {
+  max-height: 250px;
+  overflow-y: auto;
+}
 </style>
 </head>
 <body>
@@ -217,6 +246,16 @@ function clearAll(){
 }
 
 render();
+
+document.addEventListener("click", function(e){
+  const search = document.getElementById("search");
+  const list = document.getElementById("streetList");
+
+  if(e.target !== search){
+    list.innerHTML = "";
+  }
+});  
+  
 </script>
 
 </body>
