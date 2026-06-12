@@ -20,17 +20,6 @@ body {
   padding-bottom: 25px;
 }
 
-.header-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.header-right h2 {
-  margin: 0;
-}
-
 .header img {
   width: 90px;
   height: auto;
@@ -44,6 +33,22 @@ input {
   box-sizing: border-box;
   border-radius: 6px;
   border: none;
+}
+
+input.error {
+  border: 2px solid #e05050;
+  background: #3a2020;
+  color: #ffaaaa;
+}
+
+.error-msg {
+  color: #ff7070;
+  font-size: 13px;
+  margin: 2px 0 4px 2px;
+  display: none;
+}
+.error-msg.visible {
+  display: block;
 }
 
 .button-wrap {
@@ -74,7 +79,6 @@ button {
 .box {
   margin-top: 10px;
   padding: 10px;
-  border: 0px solid #888;
   background: rgba(255,255,255,0.10);
 }
 
@@ -90,7 +94,6 @@ button {
   overflow-y: auto;
 }
 
-/* Route links block */
 #routeLinks {
   margin-top: 14px;
 }
@@ -120,6 +123,12 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+.hint {
+  font-size: 12px;
+  color: #aaa;
+  margin: 2px 0 4px 2px;
+}
 </style>
 </head>
 <body>
@@ -127,151 +136,393 @@ button {
 <div class="header">
   <img src="DPD_im.PNG" alt="DPD">
 </div>
-  
+
 <div class="box">
-<input id="search" placeholder="Улица" oninput="searchStreet()">
-<div id="streetList"></div>
+  <input id="search" placeholder="Улица" oninput="searchStreet()" autocomplete="off">
+  <div id="streetList"></div>
 
-<input id="house" placeholder="Дом">
-<input id="flat" placeholder="Квартира (необязательно)">
+  <input id="house" placeholder="Дом" oninput="validateHouse()">
+  <div class="error-msg" id="houseError">Неверный номер дома</div>
+  <div class="hint" id="houseHint"></div>
 
-<div class="button-wrap">
-  <button class="btn-gray" onclick="addAddress()">Добавить</button>
-</div>
+  <input id="flat" placeholder="Квартира (необязательно)">
 
-<div class="button-wrap">
-  <button class="btn-green" onclick="makeRoute()">Построить маршрут</button>
+  <div class="button-wrap">
+    <button class="btn-gray" onclick="addAddress()">Добавить</button>
+  </div>
+  <div class="button-wrap">
+    <button class="btn-green" onclick="makeRoute()">Построить маршрут</button>
+  </div>
+  <div class="button-wrap">
+    <button class="btn-gray" onclick="clearAll()">Очистить</button>
+  </div>
+
+  <h3>Список</h3>
+  <div id="list"></div>
+  <div id="routeLinks"></div>
 </div>
-<div class="button-wrap">
-  <button class="btn-gray" onclick="clearAll()">Очистить</button>
-</div>
-  
-<h3>Список</h3>
-<div id="list"></div>
-<div id="routeLinks"></div>
 
 <script>
-const streets = {
-  "obozowa": { mapName:"Obozowa", aliases:["obozowa"], basket:3, even:[58,114] },
-  "majakowskiego": { mapName:"Majakowskiego", aliases:["majakowskiego"], basket:3 },
+/*
+  Street definitions.
+  Each entry:
+    mapName   — name used in Google Maps query
+    aliases   — normalized search aliases
+    basketSortOrder — position within basket group for sorting (lower = earlier)
+    validate(n) — returns basket number (1/2/3) if house n is valid, else null
+    hintText  — shown below house input
+*/
 
-  "prymasa tysiąclecia": {
+const streetDefs = [
+  // ── КРАТА 1 ──────────────────────────────────────────────
+  {
+    key: "obozowa",
+    mapName: "Obozowa",
+    aliases: ["obozowa"],
+    basket: 1,
+    basketSortOrder: 1,
+    hintText: "Нечётные: 61–91",
+    validate(n) {
+      return (n % 2 !== 0 && n >= 61 && n <= 91) ? 1 : null;
+    }
+  },
+  {
+    key: "magistracka",
+    mapName: "Magistracka",
+    aliases: ["magistracka"],
+    basket: 1,
+    basketSortOrder: 2,
+    hintText: "27–61",
+    validate(n) {
+      return (n >= 27 && n <= 61) ? 1 : null;
+    }
+  },
+  {
+    key: "dobiszewskiego",
+    mapName: "Dobiszewskiego",
+    aliases: ["dobiszewskiego"],
+    basket: 1,
+    basketSortOrder: 3,
+    hintText: "1, 2, 3, 5",
+    validate(n) {
+      return [1, 2, 3, 5].includes(n) ? 1 : null;
+    }
+  },
+  {
+    key: "prymasa tysiąclecia 1",
     mapName: "Aleja Prymasa Tysiąclecia",
     aliases: ["prymasa", "prymasa tysiąclecia", "prymasa tysiaclecia"],
+    basket: 1,
+    basketSortOrder: 4,
+    hintText: "137, 145, 149 (крата 1) или 151, 153, 155 (крата 3)",
+    validate(n) {
+      if ([137, 145, 149].includes(n)) return 1;
+      if ([151, 153, 155].includes(n)) return 3;
+      return null;
+    }
+  },
+  {
+    key: "czorsztyńska",
+    mapName: "Czorsztyńska",
+    aliases: ["czorsztynska", "czorsztyńska"],
+    basket: 1,
+    basketSortOrder: 5,
+    hintText: "2–6",
+    validate(n) {
+      return (n >= 2 && n <= 6) ? 1 : null;
+    }
+  },
+  {
+    key: "ożarowska",
+    mapName: "Ożarowska",
+    aliases: ["ozarowska", "ożarowska"],
+    basket: 1,
+    basketSortOrder: 6,
+    hintText: "59–77",
+    validate(n) {
+      return (n >= 59 && n <= 77) ? 1 : null;
+    }
+  },
+
+  // ── КРАТА 2 ──────────────────────────────────────────────
+  {
+    key: "górczewska",
+    mapName: "Górczewska",
+    aliases: ["gorczewska", "górczewska"],
+    basket: 2,
+    basketSortOrder: 1,
+    hintText: "56, 60, 80, 82, 84",
+    validate(n) {
+      return [56, 60, 80, 82, 84].includes(n) ? 2 : null;
+    }
+  },
+  {
+    key: "bielskiego",
+    mapName: "Bielskiego",
+    aliases: ["bielskiego"],
+    basket: 2,
+    basketSortOrder: 2,
+    hintText: "2–8",
+    validate(n) {
+      return (n >= 2 && n <= 8) ? 2 : null;
+    }
+  },
+  {
+    key: "ciołka",
+    mapName: "Ciołka",
+    aliases: ["ciolka", "ciołka"],
+    basket: 2,
+    basketSortOrder: 3,
+    hintText: "2–6",
+    validate(n) {
+      return (n >= 2 && n <= 6) ? 2 : null;
+    }
+  },
+  {
+    key: "deotymy",
+    mapName: "Deotymy",
+    aliases: ["deotymy"],
+    basket: 2,
+    basketSortOrder: 4,
+    hintText: "7, 9, 11, 13, 15, 17, 19, 21, 25, 33, 37, 41, 43, 45, 46, 48, 49, 51, 52, 54, 56, 58",
+    validate(n) {
+      return [7,9,11,13,15,17,19,21,25,33,37,41,43,45,46,48,49,51,52,54,56,58].includes(n) ? 2 : null;
+    }
+  },
+  {
+    key: "sitnik",
+    mapName: "Sitnik",
+    aliases: ["sitnik", "sitnika"],
+    basket: 2,
+    basketSortOrder: 5,
+    hintText: "1–6",
+    validate(n) {
+      return (n >= 1 && n <= 6) ? 2 : null;
+    }
+  },
+  {
+    key: "raszei",
+    mapName: "Raszei",
+    aliases: ["raszei"],
+    basket: 2,
+    basketSortOrder: 6,
+    hintText: "2–8",
+    validate(n) {
+      return (n >= 2 && n <= 8) ? 2 : null;
+    }
+  },
+  {
+    key: "brożka",
+    mapName: "Brożka",
+    aliases: ["brozka", "brożka"],
+    basket: 2,
+    basketSortOrder: 7,
+    hintText: "1–2",
+    validate(n) {
+      return (n >= 1 && n <= 2) ? 2 : null;
+    }
+  },
+
+  // ── КРАТА 3 ──────────────────────────────────────────────
+  {
+    key: "obozowa 3",
+    mapName: "Obozowa",
+    aliases: ["obozowa"],
     basket: 3,
-    fixed: [151,153,155,137,145,149]
+    basketSortOrder: 1,
+    hintText: "Чётные: 58–114",
+    validate(n) {
+      return (n % 2 === 0 && n >= 58 && n <= 114) ? 3 : null;
+    }
   },
-  
-  "szalka": { mapName:"Szałka", aliases:["szalka","szalka"], basket:3 },
-  "przy lasku": { mapName:"Przy Lasku", aliases:["przy lasku","przylasku"], basket:3 },
-  "bolecha": { mapName:"Bolecha", aliases:["bolecha"], basket:3 },
-  "dobrogniewa": { mapName:"Dobrogniewa", aliases:["dobrogniewa"], basket:3 },
-
-  "górczewska": {
-    mapName:"Górczewska",
-    aliases:["gorczewska","górczewska"],
-    basket:2,
-    fixed:[56,60,80,82,84]
+  {
+    key: "majakowskiego",
+    mapName: "Majakowskiego",
+    aliases: ["majakowskiego"],
+    basket: 3,
+    basketSortOrder: 2,
+    hintText: "2–8",
+    validate(n) {
+      return (n >= 2 && n <= 8) ? 3 : null;
+    }
   },
-
-  "bielskiego": { mapName:"Bielskiego", aliases:["bielskiego"], basket:2 },
-  "ciołka": { mapName:"Ciołka", aliases:["ciolka","ciołka"], basket:2 },
-
-  "deotymy": {
-    mapName:"Deotymy",
-    aliases:["deotymy"],
-    basket:2,
-    list:[7,9,11,13,15,17,19,21,25,33,37,41,43,45,46,48,49,51,52,54,56,58]
+  // prymasa basket 3 handled inside prymasa tysiąclecia 1 validate()
+  {
+    key: "szałka",
+    mapName: "Szałka",
+    aliases: ["szalka", "szałka"],
+    basket: 3,
+    basketSortOrder: 4,
+    hintText: "4, 6",
+    validate(n) {
+      return [4, 6].includes(n) ? 3 : null;
+    }
   },
-
-  "sitnik": { mapName:"Sitnik", aliases:["sitnik","sitnika"], basket:2 },
-  "raszei": { mapName:"Raszei", aliases:["raszei"], basket:2 },
-
-  "brożka": { mapName:"Brożka", aliases:["brozka","brożka"], basket:2 },
-
-  "obozowa odd": { mapName:"Obozowa", aliases:["obozowa"], basket:1, odd:[61,91] },
-  "magistracka": { mapName:"Magistracka", aliases:["magistracka"], basket:1 },
-
-  "dobiszewskiego": {
-    mapName:"Dobiszewskiego",
-    aliases:["dobiszewskiego"],
-    basket:1,
-    fixed:[1,2,3,5]
+  {
+    key: "przy lasku",
+    mapName: "Przy Lasku",
+    aliases: ["przy lasku", "przylasku"],
+    basket: 3,
+    basketSortOrder: 5,
+    hintText: "1–8",
+    validate(n) {
+      return (n >= 1 && n <= 8) ? 3 : null;
+    }
   },
-
-  "czorsztyńska": {
-    mapName:"Czorsztyńska",
-    aliases:["czorsztynska","czorsztyńska"],
-    basket:1
+  {
+    key: "bolecha",
+    mapName: "Bolecha",
+    aliases: ["bolecha"],
+    basket: 3,
+    basketSortOrder: 6,
+    hintText: "1–99",
+    validate(n) {
+      return (n >= 1 && n <= 99) ? 3 : null;
+    }
   },
+  {
+    key: "dobrogniewa",
+    mapName: "Dobrogniewa",
+    aliases: ["dobrogniewa"],
+    basket: 3,
+    basketSortOrder: 7,
+    hintText: "1–30",
+    validate(n) {
+      return (n >= 1 && n <= 30) ? 3 : null;
+    }
+  },
+];
 
-  "ożarowska": {
-    mapName:"Ożarowska",
-    aliases:["ozarowska","ożarowska"],
-    basket:1
-  }
-};
-
-let data = JSON.parse(localStorage.getItem("data") || "[]");
-
-function normalize(str){
+// Build a lookup: normalized alias → list of streetDef entries (multiple possible for obozowa)
+function normalize(str) {
   return str.toLowerCase()
     .replace(/ą/g,"a").replace(/ć/g,"c").replace(/ę/g,"e")
     .replace(/ł/g,"l").replace(/ń/g,"n").replace(/ó/g,"o")
     .replace(/ś/g,"s").replace(/ż/g,"z").replace(/ź/g,"z");
 }
 
-function searchStreet(){
+let data = JSON.parse(localStorage.getItem("data") || "[]");
+
+// ── SEARCH ──────────────────────────────────────────────────
+const seenKeys = new Set();
+const displayStreets = []; // unique display names for search
+for (const def of streetDefs) {
+  const displayName = def.mapName;
+  if (!seenKeys.has(displayName)) {
+    seenKeys.add(displayName);
+    displayStreets.push({ displayName, def });
+  }
+}
+
+// When user types in search, find matching street defs
+function searchStreet() {
   const val = normalize(document.getElementById("search").value);
-  const list = document.getElementById("streetList");
-  list.innerHTML = "";
+  const listEl = document.getElementById("streetList");
+  listEl.innerHTML = "";
+  document.getElementById("houseHint").textContent = "";
 
-  for (const key in streets){
-    const s = streets[key];
-    const found =
-      normalize(key).includes(val) ||
-      (s.aliases || []).some(a => normalize(a).includes(val));
+  if (!val) return;
 
-    if(found){
-      const div = document.createElement("div");
-      div.className = "street";
-      div.innerText = key;
-      div.onclick = () => {
-        document.getElementById("search").value = key;
-        list.innerHTML = "";
-      };
-      list.appendChild(div);
+  const shown = new Set();
+  for (const def of streetDefs) {
+    if (def.aliases.some(a => normalize(a).includes(val))) {
+      if (!shown.has(def.mapName)) {
+        shown.add(def.mapName);
+        const div = document.createElement("div");
+        div.className = "street";
+        div.innerText = def.mapName;
+        div.onclick = () => {
+          document.getElementById("search").value = def.mapName;
+          listEl.innerHTML = "";
+          showHint(def.mapName);
+        };
+        listEl.appendChild(div);
+      }
     }
   }
 }
 
-function getBasket(street, house){
-  const r = streets[street];
-  if(!r) return 3;
-
-  const h = Number(house);
-
-  if(r.basketMap){
-    for(const b in r.basketMap){
-      if(r.basketMap[b].includes(h)) return Number(b);
-    }
-  }
-
-  return r.basket;
+function showHint(mapName) {
+  // collect all defs for this mapName
+  const defs = streetDefs.filter(d => d.mapName === mapName);
+  const hints = [...new Set(defs.map(d => d.hintText).filter(Boolean))];
+  document.getElementById("houseHint").textContent = hints.join(" / ");
 }
 
-function addAddress(){
-  const street = document.getElementById("search").value.toLowerCase().trim();
-  const house = document.getElementById("house").value.trim();
-  const flat = document.getElementById("flat").value.trim();
+// ── VALIDATE HOUSE ──────────────────────────────────────────
+function getDefsForInput() {
+  const inputName = normalize(document.getElementById("search").value.trim());
+  return streetDefs.filter(d =>
+    d.aliases.some(a => normalize(a) === inputName) ||
+    normalize(d.mapName) === inputName
+  );
+}
 
-  if(!street || !house) return;
+function validateHouse() {
+  const houseVal = document.getElementById("house").value.trim();
+  const errorEl = document.getElementById("houseError");
+  const houseInput = document.getElementById("house");
+
+  if (!houseVal) {
+    houseInput.classList.remove("error");
+    errorEl.classList.remove("visible");
+    return true;
+  }
+
+  const n = Number(houseVal);
+  if (!Number.isInteger(n) || n <= 0) {
+    houseInput.classList.add("error");
+    errorEl.textContent = "Неверный номер дома";
+    errorEl.classList.add("visible");
+    return false;
+  }
+
+  const defs = getDefsForInput();
+  if (defs.length === 0) return true; // street not found yet, skip
+
+  const result = defs.reduce((found, def) => found ?? def.validate(n), null);
+
+  if (result === null) {
+    houseInput.classList.add("error");
+    errorEl.textContent = "Неверный номер дома";
+    errorEl.classList.add("visible");
+    return false;
+  }
+
+  houseInput.classList.remove("error");
+  errorEl.classList.remove("visible");
+  return true;
+}
+
+// ── ADD ADDRESS ─────────────────────────────────────────────
+function addAddress() {
+  const searchVal = document.getElementById("search").value.trim();
+  const houseVal = document.getElementById("house").value.trim();
+  const flatVal = document.getElementById("flat").value.trim();
+
+  if (!searchVal || !houseVal) return;
+  if (!validateHouse()) return;
+
+  const n = Number(houseVal);
+  const defs = getDefsForInput();
+  if (defs.length === 0) { alert("Улица не найдена"); return; }
+
+  let basket = null;
+  let matchedDef = null;
+  for (const def of defs) {
+    const b = def.validate(n);
+    if (b !== null) { basket = b; matchedDef = def; break; }
+  }
+
+  if (basket === null) return;
 
   data.push({
-    street,
-    house,
-    flat,
-    basket: getBasket(street, Number(house))
+    streetInput: searchVal,
+    house: houseVal,
+    flat: flatVal,
+    basket,
+    mapName: matchedDef.mapName,
+    basketSortOrder: matchedDef.basketSortOrder
   });
 
   localStorage.setItem("data", JSON.stringify(data));
@@ -279,118 +530,92 @@ function addAddress(){
   document.getElementById("search").value = "";
   document.getElementById("house").value = "";
   document.getElementById("flat").value = "";
+  document.getElementById("houseHint").textContent = "";
+  document.getElementById("houseError").classList.remove("visible");
+  document.getElementById("house").classList.remove("error");
 
   render();
 }
 
-function render(){
+// ── RENDER LIST ─────────────────────────────────────────────
+function render() {
   const el = document.getElementById("list");
   el.innerHTML = "";
 
-  data.forEach((d,i)=>{
-    let color='';
-    let text='';
-    if(d.basket===1){color='green';text='1 крата';}
-    if(d.basket===2){color='orange';text='2 крата';}
-    if(d.basket===3){color='red';text='3 крата';}
-    el.innerHTML += `<div>${i+1}. ${d.street} ${d.house} ${d.flat ? "/" + d.flat : ""} — <span style="color:${color}">${text}</span></div>`;
+  data.forEach((d, i) => {
+    let color = '', text = '';
+    if (d.basket === 1) { color = 'green';  text = '1 крата'; }
+    if (d.basket === 2) { color = 'orange'; text = '2 крата'; }
+    if (d.basket === 3) { color = 'red';    text = '3 крата'; }
+    el.innerHTML += `<div style="margin:4px 0">${i+1}. ${d.streetInput} ${d.house}${d.flat ? "/" + d.flat : ""} — <span style="color:${color}">${text}</span></div>`;
   });
 
-  // clear route links when list changes
   document.getElementById("routeLinks").innerHTML = "";
 }
 
+// ── ROUTE ────────────────────────────────────────────────────
 function buildGoogleMapsUrl(addrs) {
-  // Use slash-path format: maps.google.com/maps/dir/A/B/C
-  // This is the most reliable format on mobile browsers
   const parts = addrs.map(a => encodeURIComponent(a));
   return "https://maps.google.com/maps/dir/" + parts.join("/");
 }
 
-function makeRoute(){
-  if(data.length < 1){
-    alert("Добавь минимум 1 адрес");
-    return;
-  }
+function makeRoute() {
+  if (data.length < 1) { alert("Добавь минимум 1 адрес"); return; }
 
-  // Sort all addresses: basket 3 first, then 2, then 1
-  // Within same basket: sort by mapName asc, then house number asc
+  // Sort: basket 3 first → 2 → 1; within basket by basketSortOrder, then house number
   const sorted = [...data].sort((a, b) => {
     if (b.basket !== a.basket) return b.basket - a.basket;
-    const nameA = (streets[a.street]?.mapName || a.street).toLowerCase();
-    const nameB = (streets[b.street]?.mapName || b.street).toLowerCase();
-    if (nameA !== nameB) return nameA < nameB ? -1 : 1;
+    if (a.basketSortOrder !== b.basketSortOrder) return a.basketSortOrder - b.basketSortOrder;
     return Number(a.house) - Number(b.house);
   });
 
-  // Convert to map address strings
   const allAddresses = sorted.map(item => ({
-    label: `${item.street} ${item.house}${item.flat ? "/" + item.flat : ""}`,
-    mapAddr: `${streets[item.street]?.mapName || item.street} ${item.house} Warszawa`,
+    label: `${item.streetInput} ${item.house}${item.flat ? "/" + item.flat : ""}`,
+    mapAddr: `${item.mapName} ${item.house} Warszawa`,
     basket: item.basket
   }));
 
-  // Split into chunks of max 10
   const chunks = [];
   let i = 0;
-  while (i < allAddresses.length) {
-    chunks.push(allAddresses.slice(i, i + 10));
-    i += 10;
-  }
+  while (i < allAddresses.length) { chunks.push(allAddresses.slice(i, i + 10)); i += 10; }
 
-  // Render route links
   const routeLinksEl = document.getElementById("routeLinks");
   routeLinksEl.innerHTML = "<h3>Маршруты</h3>";
 
   const basketLabel = { 3: "3 крата", 2: "2 крата", 1: "1 крата" };
-  const basketColor = { 3: "#e05050", 2: "#e09030", 1: "#50b060" };
 
   chunks.forEach((chunk, idx) => {
     const url = buildGoogleMapsUrl(chunk.map(a => a.mapAddr));
-
     const firstBasket = chunk[0].basket;
     const lastBasket = chunk[chunk.length - 1].basket;
-
-    // Build label for basket range
     let rangeLabel = basketLabel[firstBasket];
-    if (lastBasket !== firstBasket) {
-      rangeLabel += " → " + basketLabel[lastBasket];
-    }
+    if (lastBasket !== firstBasket) rangeLabel += " → " + basketLabel[lastBasket];
 
-    // Build short address list
     const addrList = chunk.map(a => a.label).join(", ");
 
     const a = document.createElement("a");
     a.className = "route-pack";
     a.href = url;
     a.target = "_blank";
-    a.innerHTML = `
-      <span class="route-pack-label">Пак ${idx + 1} · ${chunk.length} точек · ${rangeLabel}</span>
-      ${addrList}
-    `;
+    a.innerHTML = `<span class="route-pack-label">Пак ${idx+1} · ${chunk.length} точек · ${rangeLabel}</span>${addrList}`;
     routeLinksEl.appendChild(a);
   });
 }
 
-function clearAll(){
+// ── CLEAR ────────────────────────────────────────────────────
+function clearAll() {
   data = [];
   localStorage.removeItem("data");
   render();
-  document.getElementById("routeLinks").innerHTML = "";
 }
 
 render();
 
-document.addEventListener("click", function(e){
+document.addEventListener("click", function(e) {
   const search = document.getElementById("search");
   const list = document.getElementById("streetList");
-
-  if(e.target !== search){
-    list.innerHTML = "";
-  }
-});  
-  
+  if (e.target !== search) list.innerHTML = "";
+});
 </script>
-
 </body>
 </html>
