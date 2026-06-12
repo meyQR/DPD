@@ -140,6 +140,63 @@ button {
   color: #aaa;
   margin: 2px 0 4px 2px;
 }
+
+/* ── Строка адреса ── */
+.addr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 5px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.addr-row.visited {
+  background: rgba(255,255,255,0.04);
+}
+
+.addr-row.visited .addr-text {
+  text-decoration: line-through;
+  color: #888;
+}
+
+/* Чекбокс — большой, удобный для пальца */
+.addr-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 6px;
+  border: 2px solid #666;
+  background: #333;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.addr-check:checked {
+  background: #555;
+  border-color: #888;
+}
+
+.addr-check:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #aaa;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.addr-text {
+  flex: 1;
+  font-size: 15px;
+  transition: color 0.2s;
+}
 </style>
 </head>
 <body>
@@ -554,7 +611,8 @@ function addAddress() {
     flat: flatVal,
     basket,
     mapName: matchedDef.mapName,
-    basketSortOrder: matchedDef.basketSortOrder
+    basketSortOrder: matchedDef.basketSortOrder,
+    visited: false
   });
 
   localStorage.setItem("data", JSON.stringify(data));
@@ -569,6 +627,12 @@ function addAddress() {
   render();
 }
 
+function toggleVisited(index) {
+  data[index].visited = !data[index].visited;
+  localStorage.setItem("data", JSON.stringify(data));
+  render();
+}
+
 function render() {
   const el = document.getElementById("list");
   el.innerHTML = "";
@@ -579,7 +643,19 @@ function render() {
     if (d.basket === 2) { color = 'orange'; text = '2 крата'; }
     if (d.basket === 3) { color = 'red';    text = '3 крата'; }
     const flatPart = d.flat ? ` кв ${d.flat}` : "";
-    el.innerHTML += `<div style="margin:4px 0">${i+1}. ${d.streetInput} ${d.house}${flatPart} — <span style="color:${color}">${text}</span></div>`;
+    const visitedClass = d.visited ? ' visited' : '';
+
+    const row = document.createElement('div');
+    row.className = 'addr-row' + visitedClass;
+
+    row.innerHTML = `
+      <input type="checkbox" class="addr-check" ${d.visited ? 'checked' : ''} onchange="toggleVisited(${i})">
+      <span class="addr-text">
+        ${i+1}. ${d.streetInput} ${d.house}${flatPart} — <span style="color:${d.visited ? '#888' : color}">${text}</span>
+      </span>
+    `;
+
+    el.appendChild(row);
   });
 
   document.getElementById("routeLinks").innerHTML = "";
