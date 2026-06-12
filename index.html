@@ -171,16 +171,6 @@ button {
 </div>
 
 <script>
-/*
-  Street definitions.
-  Each entry:
-    mapName   — name used in Google Maps query
-    aliases   — normalized search aliases
-    basketSortOrder — position within basket group for sorting (lower = earlier)
-    validate(n) — returns basket number (1/2/3) if house n is valid, else null
-    hintText  — shown below house input
-*/
-
 const streetDefs = [
   // ── КРАТА 1 ──────────────────────────────────────────────
   {
@@ -366,7 +356,6 @@ const streetDefs = [
       return (n >= 2 && n <= 8) ? 3 : null;
     }
   },
-  // prymasa basket 3 handled inside prymasa tysiąclecia 1 validate()
   {
     key: "szałka",
     mapName: "Szałka",
@@ -413,7 +402,6 @@ const streetDefs = [
   },
 ];
 
-// Build a lookup: normalized alias → list of streetDef entries (multiple possible for obozowa)
 function normalize(str) {
   return str.toLowerCase()
     .replace(/ą/g,"a").replace(/ć/g,"c").replace(/ę/g,"e")
@@ -423,18 +411,6 @@ function normalize(str) {
 
 let data = JSON.parse(localStorage.getItem("data") || "[]");
 
-// ── SEARCH ──────────────────────────────────────────────────
-const seenKeys = new Set();
-const displayStreets = []; // unique display names for search
-for (const def of streetDefs) {
-  const displayName = def.mapName;
-  if (!seenKeys.has(displayName)) {
-    seenKeys.add(displayName);
-    displayStreets.push({ displayName, def });
-  }
-}
-
-// When user types in search, find matching street defs
 function searchStreet() {
   const val = normalize(document.getElementById("search").value);
   const listEl = document.getElementById("streetList");
@@ -463,13 +439,11 @@ function searchStreet() {
 }
 
 function showHint(mapName) {
-  // collect all defs for this mapName
   const defs = streetDefs.filter(d => d.mapName === mapName);
   const hints = [...new Set(defs.map(d => d.hintText).filter(Boolean))];
   document.getElementById("houseHint").textContent = hints.join(" / ");
 }
 
-// ── VALIDATE HOUSE ──────────────────────────────────────────
 function getDefsForInput() {
   const inputName = normalize(document.getElementById("search").value.trim());
   return streetDefs.filter(d =>
@@ -479,7 +453,6 @@ function getDefsForInput() {
 }
 
 function parseHouseNum(raw) {
-  // Accept plain integer or slash-format like "56/60" → use first part
   const norm = raw.trim();
   if (/^\d+$/.test(norm)) return Number(norm);
   if (/^\d+\/\d+$/.test(norm)) return Number(norm.split("/")[0]);
@@ -498,9 +471,8 @@ function validateHouse() {
   }
 
   const defs = getDefsForInput();
-  if (defs.length === 0) return true; // street not found yet, skip
+  if (defs.length === 0) return true;
 
-  // Try validateRaw first (for slash-format defs), then numeric validate
   const resultRaw = defs.reduce((found, def) => {
     if (found !== null) return found;
     if (def.validateRaw) return def.validateRaw(houseVal) ?? null;
@@ -535,7 +507,6 @@ function validateHouse() {
   return true;
 }
 
-// ── ADD ADDRESS ─────────────────────────────────────────────
 function addAddress() {
   const searchVal = document.getElementById("search").value.trim();
   const houseVal = document.getElementById("house").value.trim();
@@ -550,7 +521,6 @@ function addAddress() {
   let basket = null;
   let matchedDef = null;
 
-  // Try validateRaw first (slash-format), then numeric
   for (const def of defs) {
     if (def.validateRaw) {
       const b = def.validateRaw(houseVal);
@@ -588,7 +558,6 @@ function addAddress() {
   render();
 }
 
-// ── RENDER LIST ─────────────────────────────────────────────
 function render() {
   const el = document.getElementById("list");
   el.innerHTML = "";
@@ -598,13 +567,13 @@ function render() {
     if (d.basket === 1) { color = 'green';  text = '1 крата'; }
     if (d.basket === 2) { color = 'orange'; text = '2 крата'; }
     if (d.basket === 3) { color = 'red';    text = '3 крата'; }
-    el.innerHTML += `<div style="margin:4px 0">${i+1}. ${d.streetInput} ${d.house}${d.flat ? "/" + d.flat : ""} — <span style="color:${color}">${text}</span></div>`;
+    const flatPart = d.flat ? ` кв ${d.flat}` : "";
+    el.innerHTML += `<div style="margin:4px 0">${i+1}. ${d.streetInput} ${d.house}${flatPart} — <span style="color:${color}">${text}</span></div>`;
   });
 
   document.getElementById("routeLinks").innerHTML = "";
 }
 
-// ── ROUTE ────────────────────────────────────────────────────
 function buildGoogleMapsUrl(addrs) {
   const parts = addrs.map(a => encodeURIComponent(a));
   return "https://maps.google.com/maps/dir/" + parts.join("/");
@@ -613,7 +582,6 @@ function buildGoogleMapsUrl(addrs) {
 function makeRoute() {
   if (data.length < 1) { alert("Добавь минимум 1 адрес"); return; }
 
-  // Sort: basket 3 first → 2 → 1; within basket by basketSortOrder, then house number
   const sorted = [...data].sort((a, b) => {
     if (b.basket !== a.basket) return b.basket - a.basket;
     if (a.basketSortOrder !== b.basketSortOrder) return a.basketSortOrder - b.basketSortOrder;
@@ -621,7 +589,7 @@ function makeRoute() {
   });
 
   const allAddresses = sorted.map(item => ({
-    label: `${item.streetInput} ${item.house}${item.flat ? "/" + item.flat : ""}`,
+    label: `${item.streetInput} ${item.house}${item.flat ? ` кв. ${item.flat}` : ""}`,
     mapAddr: `${item.mapName} ${parseHouseNum(item.house)} Warszawa`,
     basket: item.basket
   }));
@@ -653,14 +621,9 @@ function makeRoute() {
   });
 }
 
-// ── CLEAR ────────────────────────────────────────────────────
 function clearAll() {
   const confirmed = confirm("Очистить список?");
-
-  if (!confirmed) {
-    return;
-  }
-
+  if (!confirmed) return;
   data = [];
   localStorage.removeItem("data");
   render();
