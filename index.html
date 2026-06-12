@@ -12,12 +12,58 @@ body {
   color: #fff;
 }
 
-input, button {
+/* header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+/* image */
+.header img {
+  width: 90px;
+  height: auto;
+  object-fit: contain;
+}
+
+/* inputs */
+input {
   font-size: 18px;
   padding: 10px;
   margin: 5px 0;
   width: 100%;
   box-sizing: border-box;
+  border-radius: 6px;
+  border: none;
+}
+
+/* buttons */
+button {
+  font-size: 16px;
+  padding: 10px;
+  margin: 5px 0;
+  width: 60%;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+/* specific buttons */
+.btn-green {
+  background: #1f8f3a;
+  color: white;
+}
+
+.btn-gray {
+  background: #444;
+  color: white;
 }
 
 .box {
@@ -42,21 +88,30 @@ input, button {
 </head>
 <body>
 
-<h2>DPD-Opti</h2>
-<h3>Оптимизация</h3>
+<div class="header">
+  <div class="header-text">
+    <h2>DPD-Opti</h2>
+    <h3>Оптимизация</h3>
+  </div>
+  <img src="DPD_im.PNG" alt="DPD">
+</div>  
 
 <input id="search" placeholder="Улица (например: ozar, gorcz, ciol...)" oninput="searchStreet()">
 <div id="streetList"></div>
 
 <div class="box">
+<input id="search" placeholder="Улица (например: ozar, gorcz, ciol...)" oninput="searchStreet()">
+<div id="streetList"></div>
+
 <input id="house" placeholder="Дом">
 <input id="flat" placeholder="Квартира (необязательно)">
-<button onclick="addAddress()">Добавить</button>
+
+<button class="btn-gray" onclick="addAddress()">Добавить</button>
 </div>
 
-<button onclick="makeRoute()">Построить маршрут</button>
-<button onclick="clearAll()">Очистить</button>
-
+<button class="btn-green" onclick="makeRoute()">Построить маршрут</button>
+<button class="btn-gray" onclick="clearAll()">Очистить</button>
+  
 <h3>Список</h3>
 <div id="list"></div>
 
