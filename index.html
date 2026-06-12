@@ -12,7 +12,6 @@ body {
   color: #fff;
 }
 
-/* header */
 .header {
   display: flex;
   justify-content: center;
@@ -21,7 +20,6 @@ body {
   padding-bottom: 25px;
 }
 
-/* right block */
 .header-right {
   display: flex;
   flex-direction: column;
@@ -33,13 +31,11 @@ body {
   margin: 0;
 }
 
-/* image */
 .header img {
   width: 90px;
   height: auto;
 }
 
-/* inputs */
 input {
   font-size: 18px;
   padding: 10px;
@@ -50,7 +46,6 @@ input {
   border: none;
 }
 
-/* buttons centered */
 .button-wrap {
   display: flex;
   justify-content: center;
@@ -66,7 +61,6 @@ button {
   cursor: pointer;
 }
 
-/* colors */
 .btn-green {
   background: #1f8f3a;
   color: white;
@@ -77,7 +71,6 @@ button {
   color: white;
 }
 
-/* boxes */
 .box {
   margin-top: 10px;
   padding: 10px;
@@ -95,6 +88,37 @@ button {
 #streetList {
   max-height: 250px;
   overflow-y: auto;
+}
+
+/* Route links block */
+#routeLinks {
+  margin-top: 14px;
+}
+
+.route-pack {
+  display: block;
+  margin: 8px 0;
+  padding: 10px 14px;
+  background: #1a5c2e;
+  border-radius: 8px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.route-pack:hover {
+  background: #25803f;
+}
+
+.route-pack-label {
+  font-size: 12px;
+  color: #a0f0b8;
+  display: block;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 </style>
 </head>
@@ -124,6 +148,7 @@ button {
   
 <h3>Список</h3>
 <div id="list"></div>
+<div id="routeLinks"></div>
 
 <script>
 const streets = {
@@ -173,7 +198,6 @@ const streets = {
     basket:1,
     fixed:[1,2,3,5]
   },
-
 
   "czorsztyńska": {
     mapName:"Czorsztyńska",
@@ -264,46 +288,94 @@ function render(){
   el.innerHTML = "";
 
   data.forEach((d,i)=>{
-    
-let color='';
-let text='';
-if(d.basket===1){color='green';text='1 крата';}
-if(d.basket===2){color='orange';text='2 крата';}
-if(d.basket===3){color='red';text='3 крата';}
-el.innerHTML += `<div>${i+1}. ${d.street} ${d.house} ${d.flat ? "/" + d.flat : ""} — <span style="color:${color}">${text}</span></div>`;
-
+    let color='';
+    let text='';
+    if(d.basket===1){color='green';text='1 крата';}
+    if(d.basket===2){color='orange';text='2 крата';}
+    if(d.basket===3){color='red';text='3 крата';}
+    el.innerHTML += `<div>${i+1}. ${d.street} ${d.house} ${d.flat ? "/" + d.flat : ""} — <span style="color:${color}">${text}</span></div>`;
   });
+
+  // clear route links when list changes
+  document.getElementById("routeLinks").innerHTML = "";
+}
+
+function buildGoogleMapsUrl(addresses) {
+  if (addresses.length === 0) return null;
+  if (addresses.length === 1) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addresses[0])}`;
+  }
+  const origin = encodeURIComponent(addresses[0]);
+  const destination = encodeURIComponent(addresses[addresses.length - 1]);
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+  if (addresses.length > 2) {
+    url += "&waypoints=" + addresses.slice(1, -1).map(encodeURIComponent).join("|");
+  }
+  return url;
 }
 
 function makeRoute(){
-  const sorted = [...data].sort((a,b)=>b.basket-a.basket);
-
-  if(sorted.length < 2){
-    alert("Добавь минимум 2 адреса");
+  if(data.length < 1){
+    alert("Добавь минимум 1 адрес");
     return;
   }
 
-  const addresses = sorted.map(item =>
-    `${streets[item.street].mapName} ${item.house}, Warszawa, Poland`
-  );
+  // Sort all addresses: basket 3 first, then 2, then 1
+  const sorted = [...data].sort((a, b) => b.basket - a.basket);
 
-  const origin = encodeURIComponent(addresses[0]);
-  const destination = encodeURIComponent(addresses[addresses.length - 1]);
+  // Convert to map address strings
+  const allAddresses = sorted.map(item => ({
+    label: `${item.street} ${item.house}${item.flat ? "/" + item.flat : ""}`,
+    mapAddr: `${streets[item.street]?.mapName || item.street} ${item.house}, Warszawa, Poland`,
+    basket: item.basket
+  }));
 
-  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
-
-  if(addresses.length > 2){
-    url += "&waypoints=" +
-      addresses.slice(1,-1).map(encodeURIComponent).join("|");
+  // Split into chunks of max 10
+  const chunks = [];
+  let i = 0;
+  while (i < allAddresses.length) {
+    chunks.push(allAddresses.slice(i, i + 10));
+    i += 10;
   }
 
-  window.location.href = url;
+  // Render route links
+  const routeLinksEl = document.getElementById("routeLinks");
+  routeLinksEl.innerHTML = "<h3>Маршруты</h3>";
+
+  const basketLabel = { 3: "3 крата", 2: "2 крата", 1: "1 крата" };
+  const basketColor = { 3: "#e05050", 2: "#e09030", 1: "#50b060" };
+
+  chunks.forEach((chunk, idx) => {
+    const url = buildGoogleMapsUrl(chunk.map(a => a.mapAddr));
+    const firstBasket = chunk[0].basket;
+    const lastBasket = chunk[chunk.length - 1].basket;
+
+    // Build label for basket range
+    let rangeLabel = basketLabel[firstBasket];
+    if (lastBasket !== firstBasket) {
+      rangeLabel += " → " + basketLabel[lastBasket];
+    }
+
+    // Build short address list
+    const addrList = chunk.map(a => a.label).join(", ");
+
+    const a = document.createElement("a");
+    a.className = "route-pack";
+    a.href = url;
+    a.target = "_blank";
+    a.innerHTML = `
+      <span class="route-pack-label">Пак ${idx + 1} · ${chunk.length} точек · ${rangeLabel}</span>
+      ${addrList}
+    `;
+    routeLinksEl.appendChild(a);
+  });
 }
 
 function clearAll(){
   data = [];
   localStorage.removeItem("data");
   render();
+  document.getElementById("routeLinks").innerHTML = "";
 }
 
 render();
