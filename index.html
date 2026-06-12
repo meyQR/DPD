@@ -130,13 +130,13 @@ const streets = {
   "obozowa": { mapName:"Obozowa", aliases:["obozowa"], basket:3, even:[58,114] },
   "majakowskiego": { mapName:"Majakowskiego", aliases:["majakowskiego"], basket:3 },
 
-  "prymasa tysiąclecia 3": {
-    mapName:"Aleja Prymasa Tysiąclecia",
-    aliases:["prymasa","prymasa tysiąclecia","prymasa tysiaclecia"],
-    basket:3,
-    fixed:[151,153,155]
+  "prymasa tysiąclecia": {
+    mapName: "Aleja Prymasa Tysiąclecia",
+    aliases: ["prymasa", "prymasa tysiąclecia", "prymasa tysiaclecia"],
+    basket: 3,
+    fixed: [151,153,155,137,145,149]
   },
-
+  
   "szalka": { mapName:"Szałka", aliases:["szalka","szalka"], basket:3 },
   "przy lasku": { mapName:"Przy Lasku", aliases:["przy lasku","przylasku"], basket:3 },
   "bolecha": { mapName:"Bolecha", aliases:["bolecha"], basket:3 },
@@ -174,12 +174,6 @@ const streets = {
     fixed:[1,2,3,5]
   },
 
-  "prymasa 1": {
-    mapName:"Aleja Prymasa Tysiąclecia",
-    aliases:["prymasa","prymasa tysiąclecia","prymasa tysiaclecia"],
-    basket:1,
-    fixed:[137,145,149]
-  },
 
   "czorsztyńska": {
     mapName:"Czorsztyńska",
@@ -231,11 +225,13 @@ function getBasket(street, house){
   const r = streets[street];
   if(!r) return 3;
 
-  if(r.fixed && r.fixed.includes(Number(house))) return r.basket;
-  if(r.list && r.list.includes(Number(house))) return r.basket;
+  const h = Number(house);
 
-  if(r.even && house % 2 === 0 && house >= r.even[0] && house <= r.even[1]) return r.basket;
-  if(r.odd && house % 2 === 1 && house >= r.odd[0] && house <= r.odd[1]) return r.basket;
+  if(r.basketMap){
+    for(const b in r.basketMap){
+      if(r.basketMap[b].includes(h)) return Number(b);
+    }
+  }
 
   return r.basket;
 }
