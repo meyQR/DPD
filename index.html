@@ -143,59 +143,22 @@ button {
 
 /* ── Строка адреса ── */
 .addr-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 5px 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  transition: background 0.2s;
+  font-size: 14px;
+  line-height: 1.35;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 3px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.addr-row:active {
+  background: rgba(255,255,255,0.06);
 }
 
 .addr-row.visited {
-  background: rgba(255,255,255,0.04);
-}
-
-.addr-row.visited .addr-text {
   text-decoration: line-through;
-  color: #888;
-}
-
-/* Чекбокс — большой, удобный для пальца */
-.addr-check {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
-  border-radius: 6px;
-  border: 2px solid #666;
-  background: #333;
-  cursor: pointer;
-  position: relative;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.addr-check:checked {
-  background: #555;
-  border-color: #888;
-}
-
-.addr-check:checked::after {
-  content: "✓";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #aaa;
-  font-size: 16px;
-  line-height: 1;
-}
-
-.addr-text {
-  flex: 1;
-  font-size: 15px;
-  transition: color 0.2s;
+  color: #777;
 }
 </style>
 </head>
@@ -360,7 +323,7 @@ const streetDefs = [
   {
     key: "sitnika",
     mapName: "Sitnika",
-    aliases: ["sitnika", "sitnika"],
+    aliases: ["sitnika"],
     basket: 2,
     basketSortOrder: 5,
     hintText: "1–6",
@@ -643,17 +606,13 @@ function render() {
     if (d.basket === 2) { color = 'orange'; text = '2 крата'; }
     if (d.basket === 3) { color = 'red';    text = '3 крата'; }
     const flatPart = d.flat ? ` кв ${d.flat}` : "";
-    const visitedClass = d.visited ? ' visited' : '';
 
     const row = document.createElement('div');
-    row.className = 'addr-row' + visitedClass;
+    row.className = 'addr-row' + (d.visited ? ' visited' : '');
+    row.onclick = () => toggleVisited(i);
 
-    row.innerHTML = `
-      <input type="checkbox" class="addr-check" ${d.visited ? 'checked' : ''} onchange="toggleVisited(${i})">
-      <span class="addr-text">
-        ${i+1}. ${d.streetInput} ${d.house}${flatPart} — <span style="color:${d.visited ? '#888' : color}">${text}</span>
-      </span>
-    `;
+    const basketColor = d.visited ? '#777' : color;
+    row.innerHTML = `${i+1}. ${d.streetInput} ${d.house}${flatPart} — <span style="color:${basketColor}">${text}</span>`;
 
     el.appendChild(row);
   });
