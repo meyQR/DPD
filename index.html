@@ -8,7 +8,7 @@
 body {
   font-family: Arial;
   margin: 10px;
-  background: #222;
+  background: #2f2f2f;
   color: #fff;
 }
 
@@ -21,12 +21,12 @@ body {
 }
 
 .header img {
-  width: 90px;
+  width: 113px;
   height: auto;
 }
 
 input {
-  font-size: 16px;
+  font-size: 18px;
   padding: 10px;
   margin: 5px 0;
   width: 100%;
@@ -49,6 +49,16 @@ input.error {
 }
 .error-msg.visible {
   display: block;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin: 5px 0;
+}
+
+.button-row button {
+  flex: 1;
 }
 
 .button-wrap {
@@ -147,14 +157,12 @@ button {
 
   <input id="flat" placeholder="Квартира (необязательно)">
 
-  <div class="button-wrap">
+  <div class="button-row">
     <button class="btn-gray" onclick="addAddress()">Добавить</button>
+    <button class="btn-gray" onclick="clearAll()">Очистить</button>
   </div>
   <div class="button-wrap">
     <button class="btn-green" onclick="makeRoute()">Построить маршрут</button>
-  </div>
-  <div class="button-wrap">
-    <button class="btn-gray" onclick="clearAll()">Очистить</button>
   </div>
 
   <h3>Список</h3>
@@ -251,9 +259,15 @@ const streetDefs = [
     aliases: ["gorczewska", "górczewska"],
     basket: 2,
     basketSortOrder: 1,
-    hintText: "56/60, 80, 82, 84",
+    hintText: "56/60, 80, 82, 82/84",
+    validateRaw(raw) {
+      const valid = ["56/60","80","82","82/84"];
+      const norm = raw.trim().replace(/\s/g,"");
+      if (valid.includes(norm)) return 2;
+      return null;
+    },
     validate(n) {
-      return [56/60, 80, 82, 84].includes(n) ? 2 : null;
+      return [56, 60, 80, 82, 84].includes(n) ? 2 : null;
     }
   },
   {
@@ -285,14 +299,20 @@ const streetDefs = [
     basket: 2,
     basketSortOrder: 4,
     hintText: "7/9, 11, 13, 15, 17, 19, 21, 25, 33, 37, 41, 43, 45, 46, 48, 49, 51, 52, 54, 56, 58",
+    validateRaw(raw) {
+      const valid = ["7/9","11","13","15","17","19","21","25","33","37","41","43","45","46","48","49","51","52","54","56","58"];
+      const norm = raw.trim().replace(/\s/g,"");
+      if (valid.includes(norm)) return 2;
+      return null;
+    },
     validate(n) {
-      return [7/9,11,13,15,17,19,21,25,33,37,41,43,45,46,48,49,51,52,54,56,58].includes(n) ? 2 : null;
+      return [7,9,11,13,15,17,19,21,25,33,37,41,43,45,46,48,49,51,52,54,56,58].includes(n) ? 2 : null;
     }
   },
   {
-    key: "sitnika",
-    mapName: "Sitnika",
-    aliases: ["sitnika", "sitnika"],
+    key: "sitnik",
+    mapName: "Sitnik",
+    aliases: ["sitnik", "sitnika"],
     basket: 2,
     basketSortOrder: 5,
     hintText: "1–6",
@@ -458,6 +478,14 @@ function getDefsForInput() {
   );
 }
 
+function parseHouseNum(raw) {
+  // Accept plain integer or slash-format like "56/60" → use first part
+  const norm = raw.trim();
+  if (/^\d+$/.test(norm)) return Number(norm);
+  if (/^\d+\/\d+$/.test(norm)) return Number(norm.split("/")[0]);
+  return NaN;
+}
+
 function validateHouse() {
   const houseVal = document.getElementById("house").value.trim();
   const errorEl = document.getElementById("houseError");
@@ -469,16 +497,29 @@ function validateHouse() {
     return true;
   }
 
-  const n = Number(houseVal);
-  if (!Number.isInteger(n) || n <= 0) {
+  const defs = getDefsForInput();
+  if (defs.length === 0) return true; // street not found yet, skip
+
+  // Try validateRaw first (for slash-format defs), then numeric validate
+  const resultRaw = defs.reduce((found, def) => {
+    if (found !== null) return found;
+    if (def.validateRaw) return def.validateRaw(houseVal) ?? null;
+    return null;
+  }, null);
+
+  if (resultRaw !== null) {
+    houseInput.classList.remove("error");
+    errorEl.classList.remove("visible");
+    return true;
+  }
+
+  const n = parseHouseNum(houseVal);
+  if (isNaN(n) || n <= 0) {
     houseInput.classList.add("error");
     errorEl.textContent = "Неверный номер дома";
     errorEl.classList.add("visible");
     return false;
   }
-
-  const defs = getDefsForInput();
-  if (defs.length === 0) return true; // street not found yet, skip
 
   const result = defs.reduce((found, def) => found ?? def.validate(n), null);
 
@@ -503,15 +544,25 @@ function addAddress() {
   if (!searchVal || !houseVal) return;
   if (!validateHouse()) return;
 
-  const n = Number(houseVal);
   const defs = getDefsForInput();
   if (defs.length === 0) { alert("Улица не найдена"); return; }
 
   let basket = null;
   let matchedDef = null;
+
+  // Try validateRaw first (slash-format), then numeric
   for (const def of defs) {
-    const b = def.validate(n);
-    if (b !== null) { basket = b; matchedDef = def; break; }
+    if (def.validateRaw) {
+      const b = def.validateRaw(houseVal);
+      if (b !== null) { basket = b; matchedDef = def; break; }
+    }
+  }
+  if (basket === null) {
+    const n = parseHouseNum(houseVal);
+    for (const def of defs) {
+      const b = def.validate(n);
+      if (b !== null) { basket = b; matchedDef = def; break; }
+    }
   }
 
   if (basket === null) return;
@@ -566,12 +617,12 @@ function makeRoute() {
   const sorted = [...data].sort((a, b) => {
     if (b.basket !== a.basket) return b.basket - a.basket;
     if (a.basketSortOrder !== b.basketSortOrder) return a.basketSortOrder - b.basketSortOrder;
-    return Number(a.house) - Number(b.house);
+    return parseHouseNum(a.house) - parseHouseNum(b.house);
   });
 
   const allAddresses = sorted.map(item => ({
     label: `${item.streetInput} ${item.house}${item.flat ? "/" + item.flat : ""}`,
-    mapAddr: `${item.mapName} ${item.house} Warszawa`,
+    mapAddr: `${item.mapName} ${parseHouseNum(item.house)} Warszawa`,
     basket: item.basket
   }));
 
