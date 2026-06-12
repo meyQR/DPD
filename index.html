@@ -655,6 +655,12 @@ function makeRoute() {
 
 // ── CLEAR ────────────────────────────────────────────────────
 function clearAll() {
+  const confirmed = confirm("Уверены?");
+
+  if (!confirmed) {
+    return;
+  }
+
   data = [];
   localStorage.removeItem("data");
   render();
