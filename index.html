@@ -590,10 +590,23 @@ function addAddress() {
   render();
 }
 
-function toggleVisited(index) {
+function toggleVisited(index, rowEl) {
   data[index].visited = !data[index].visited;
   localStorage.setItem("data", JSON.stringify(data));
-  render();
+
+  const d = data[index];
+  let color = '';
+  if (d.basket === 1) color = 'green';
+  if (d.basket === 2) color = 'orange';
+  if (d.basket === 3) color = 'red';
+
+  if (d.visited) {
+    rowEl.classList.add('visited');
+    rowEl.querySelector('span').style.color = '#777';
+  } else {
+    rowEl.classList.remove('visited');
+    rowEl.querySelector('span').style.color = color;
+  }
 }
 
 function render() {
@@ -609,15 +622,13 @@ function render() {
 
     const row = document.createElement('div');
     row.className = 'addr-row' + (d.visited ? ' visited' : '');
-    row.onclick = () => toggleVisited(i);
+    row.onclick = () => toggleVisited(i, row);
 
     const basketColor = d.visited ? '#777' : color;
     row.innerHTML = `${i+1}. ${d.streetInput} ${d.house}${flatPart} — <span style="color:${basketColor}">${text}</span>`;
 
     el.appendChild(row);
   });
-
-  document.getElementById("routeLinks").innerHTML = "";
 }
 
 function buildGoogleMapsUrl(addrs) {
