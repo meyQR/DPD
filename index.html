@@ -9,71 +9,80 @@ body { font-family: Arial; margin: 10px; }
 input, button { font-size: 18px; padding: 10px; margin: 5px 0; width: 100%; }
 .street { padding: 8px; border-bottom: 1px solid #ddd; cursor: pointer; }
 .box { margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
-.small { font-size: 14px; color: gray; }
 </style>
 </head>
 <body>
 
-<h2>📦 Курьер приложение</h2>
+<h2>Курьер приложение</h2>
 
-<input id="search" placeholder="Улица (например: obo, gor...)" oninput="searchStreet()">
+<input id="search" placeholder="Улица (например: ozar, gorcz, ciol...)" oninput="searchStreet()">
 <div id="streetList"></div>
 
 <div class="box">
-<input id="house" placeholder="Дом (например 74)">
+<input id="house" placeholder="Дом">
 <input id="flat" placeholder="Квартира (необязательно)">
 <button onclick="addAddress()">Добавить</button>
 </div>
 
-<button onclick="makeRoute()">🚀 Построить маршрут</button>
-<button onclick="clearAll()">🗑 Очистить</button>
+<button onclick="makeRoute()">Построить маршрут</button>
+<button onclick="clearAll()">Очистить</button>
 
 <h3>Список</h3>
 <div id="list"></div>
 
 <script>
 const streets = {
-  // 3 КРАТА (первые в маршруте)
-  "obozowa": {basket:3, even:[58,114], odd:null},
-  "majakowskiego": {basket:3},
-  "prymasa 3": {basket:3, fixed:[151,153,155]},
-  "szalka": {basket:3},
-  "przy lasku": {basket:3},
-  "bolecha": {basket:3},
-  "dobrogniewa": {basket:3},
+  "obozowa": { mapName:"Obozowa", aliases:["obozowa"], basket:3, even:[58,114] },
+  "majakowskiego": { mapName:"Majakowskiego", aliases:["majakowskiego"], basket:3 },
+  "prymasa 3": { mapName:"Aleja Prymasa Tysiąclecia", aliases:["prymasa"], basket:3, fixed:[151,153,155] },
+  "szalka": { mapName:"Szalka", aliases:["szalka"], basket:3 },
+  "przy lasku": { mapName:"Przy Lasku", aliases:["przy lasku","przylasku"], basket:3 },
+  "bolecha": { mapName:"Bolecha", aliases:["bolecha"], basket:3 },
+  "dobrogniewa": { mapName:"Dobrogniewa", aliases:["dobrogniewa"], basket:3 },
 
-  // 2 КРАТА
-  "górczewska": {basket:2, fixed:[56,60,80,82,84]},
-  "bielskiego": {basket:2},
-  "ciołka": {basket:2},
-  "deotymy": {basket:2, list:[7,9,11,13,15,17,19,21,25,33,37,41,43,43.1,45,46,48,49,51,52,54,56,58]},
-  "sitnika": {basket:2},
-  "raszei": {basket:2},
-  "brożka": {basket:2},
+  "górczewska": { mapName:"Górczewska", aliases:["gorczewska"], basket:2, fixed:[56,60,80,82,84] },
+  "bielskiego": { mapName:"Bielskiego", aliases:["bielskiego"], basket:2 },
+  "ciołka": { mapName:"Ciołka", aliases:["ciolka"], basket:2 },
+  "deotymy": { mapName:"Deotymy", aliases:["deotymy"], basket:2, list:[7,9,11,13,15,17,19,21,25,33,37,41,43,43.1,45,46,48,49,51,52,54,56,58] },
+  "sitnika": { mapName:"Sitnika", aliases:["sitnika"], basket:2 },
+  "raszei": { mapName:"Raszei", aliases:["raszei"], basket:2 },
+  "brożka": { mapName:"Brożka", aliases:["brozka"], basket:2 },
 
-  // 1 КРАТА (последние)
-  "obozowa odd": {basket:1, odd:[61,91]},
-  "magistracka": {basket:1},
-  "dobiszewskiego": {basket:1, fixed:[1,2,3,5]},
-  "prymasa 1": {basket:1, fixed:[137,145,149]},
-  "czorsztyńska": {basket:1},
-  "ożarowska": {basket:1}
+  "obozowa odd": { mapName:"Obozowa", aliases:["obozowa odd"], basket:1, odd:[61,91] },
+  "magistracka": { mapName:"Magistracka", aliases:["magistracka"], basket:1 },
+  "dobiszewskiego": { mapName:"Dobiszewskiego", aliases:["dobiszewskiego"], basket:1, fixed:[1,2,3,5] },
+  "prymasa 1": { mapName:"Aleja Prymasa Tysiąclecia", aliases:["prymasa"], basket:1, fixed:[137,145,149] },
+  "czorsztyńska": { mapName:"Czorsztyńska", aliases:["czorsztynska"], basket:1 },
+  "ożarowska": { mapName:"Ożarowska", aliases:["ozarowska"], basket:1 }
 };
 
 let data = JSON.parse(localStorage.getItem("data") || "[]");
 
+function normalize(str){
+  return str.toLowerCase()
+    .replace(/ą/g,"a").replace(/ć/g,"c").replace(/ę/g,"e")
+    .replace(/ł/g,"l").replace(/ń/g,"n").replace(/ó/g,"o")
+    .replace(/ś/g,"s").replace(/ż/g,"z").replace(/ź/g,"z");
+}
+
 function searchStreet(){
-  const val = document.getElementById("search").value.toLowerCase();
+  const val = normalize(document.getElementById("search").value);
   const list = document.getElementById("streetList");
   list.innerHTML = "";
 
-  for(let s in streets){
-    if(s.includes(val)){
-      let div = document.createElement("div");
+  for (const key in streets){
+    const s = streets[key];
+    const found =
+      normalize(key).includes(val) ||
+      (s.aliases || []).some(a => normalize(a).includes(val));
+
+    if(found){
+      const div = document.createElement("div");
       div.className = "street";
-      div.innerText = s;
+      div.innerText = key;
       div.onclick = () => {
-        document.getElementById("search").value = s;
+        document.getElementById("search").value = key;
+        list.innerHTML = "";
       };
       list.appendChild(div);
     }
@@ -81,42 +90,30 @@ function searchStreet(){
 }
 
 function getBasket(street, house){
-  let r = streets[street];
+  const r = streets[street];
   if(!r) return 3;
 
   if(r.fixed && r.fixed.includes(Number(house))) return r.basket;
   if(r.list && r.list.includes(Number(house))) return r.basket;
-  if(r.even){
-    if(house % 2 === 0 && house >= r.even[0] && house <= r.even[1]) return r.basket;
-  }
-  if(r.odd){
-    if(house % 2 === 1 && house >= r.odd[0] && house <= r.odd[1]) return r.basket;
-  }
+
+  if(r.even && house % 2 === 0 && house >= r.even[0] && house <= r.even[1]) return r.basket;
+  if(r.odd && house % 2 === 1 && house >= r.odd[0] && house <= r.odd[1]) return r.basket;
+
   return r.basket;
 }
 
-function addAddress() {
-  let street = document.getElementById("search").value.toLowerCase().trim();
-  let house = document.getElementById("house").value.trim();
-  let flat = document.getElementById("flat").value.trim();
+function addAddress(){
+  const street = document.getElementById("search").value.toLowerCase().trim();
+  const house = document.getElementById("house").value.trim();
+  const flat = document.getElementById("flat").value.trim();
 
-  if (!street || !house) {
-    alert("Укажи улицу и дом");
-    return;
-  }
-
-  if (!streets[street]) {
-    alert("Выбери улицу из списка");
-    return;
-  }
-
-  let basket = getBasket(street, Number(house));
+  if(!street || !house) return;
 
   data.push({
     street,
     house,
     flat,
-    basket
+    basket: getBasket(street, Number(house))
   });
 
   localStorage.setItem("data", JSON.stringify(data));
@@ -125,49 +122,38 @@ function addAddress() {
   document.getElementById("house").value = "";
   document.getElementById("flat").value = "";
 
-  document.getElementById("streetList").innerHTML = "";
-
   render();
 }
 
 function render(){
-  let el = document.getElementById("list");
+  const el = document.getElementById("list");
   el.innerHTML = "";
 
   data.forEach((d,i)=>{
-    el.innerHTML += `<div>${i+1}. ${d.street} ${d.house}/${d.flat||""} — 🟡 ${d.basket}</div>`;
+    el.innerHTML += `<div>${i+1}. ${d.street} ${d.house} ${d.flat ? "/" + d.flat : ""} — ${d.basket}</div>`;
   });
 }
 
-function makeRoute() {
-  let sorted = [...data].sort((a, b) => b.basket - a.basket);
+function makeRoute(){
+  const sorted = [...data].sort((a,b)=>b.basket-a.basket);
 
-  if (sorted.length < 2) {
+  if(sorted.length < 2){
     alert("Добавь минимум 2 адреса");
     return;
   }
 
   const addresses = sorted.map(item =>
-    `${item.street} ${item.house}, Warszawa`
+    `${streets[item.street].mapName} ${item.house}, Warszawa, Poland`
   );
 
   const origin = encodeURIComponent(addresses[0]);
-  const destination = encodeURIComponent(
-    addresses[addresses.length - 1]
-  );
+  const destination = encodeURIComponent(addresses[addresses.length - 1]);
 
-  let url =
-    `https://www.google.com/maps/dir/?api=1` +
-    `&origin=${origin}` +
-    `&destination=${destination}`;
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
 
-  if (addresses.length > 2) {
-    const waypoints = addresses
-      .slice(1, -1)
-      .map(encodeURIComponent)
-      .join("|");
-
-    url += `&waypoints=${waypoints}`;
+  if(addresses.length > 2){
+    url += "&waypoints=" +
+      addresses.slice(1,-1).map(encodeURIComponent).join("|");
   }
 
   window.location.href = url;
