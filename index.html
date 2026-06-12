@@ -15,8 +15,10 @@ body {
 /* header */
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  padding-top: 25px;
+  padding-bottom: 25px;
 }
 
 /* right block */
@@ -79,8 +81,8 @@ button {
 .box {
   margin-top: 10px;
   padding: 10px;
-  border: 1px solid #777;
-  background: rgba(255,255,255,0.05);
+  border: 1px solid #888;
+  background: rgba(255,255,255,0.10);
 }
 
 .street {
@@ -99,14 +101,9 @@ button {
 <body>
 
 <div class="header">
-  <div></div>
-
-  <div class="header-right">
-    <h2>DPD-Opti</h2>
-    <img src="DPD_im.PNG" alt="DPD">
-  </div>
-</div> 
-
+  <img src="DPD_im.PNG" alt="DPD">
+</div>
+  
 <div class="box">
 <input id="search" placeholder="Улица" oninput="searchStreet()">
 <div id="streetList"></div>
