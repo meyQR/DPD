@@ -329,10 +329,18 @@ const streetDefs = [
     basketSortOrder: 7,
     hintText: "1–2",
     validate(n) {
-      return (n >= 1 && n <= 2) ? 2 : null;
+      return (n >= 1 && n <= 2) ? 2 : 
+  {
+    key: "ringelbluma",
+    mapName: "Ringelbluma",
+    aliases: ["ringelbluma"],
+    basket: 2,
+    basketSortOrder: 8,
+    hintText: "1, 2, 3",
+    validate(n) {
+      return [1, 2, 3].includes(n) ? 2 : null;
     }
   },
-
   // ── КРАТА 3 ──────────────────────────────────────────────
   {
     key: "obozowa 3",
