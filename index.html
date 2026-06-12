@@ -329,7 +329,9 @@ const streetDefs = [
     basketSortOrder: 7,
     hintText: "1–2",
     validate(n) {
-      return (n >= 1 && n <= 2) ? 2 : 
+      return (n >= 1 && n <= 2) ? 2 : null;
+    }
+  },
   {
     key: "ringelbluma",
     mapName: "Ringelbluma",
