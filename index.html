@@ -589,7 +589,7 @@ function makeRoute() {
   });
 
   const allAddresses = sorted.map(item => ({
-    label: `${item.streetInput} ${item.house}${item.flat ? ` кв. ${item.flat}` : ""}`,
+    label: `${item.streetInput} ${item.house}${item.flat ? ` кв ${item.flat}` : ""}`,
     mapAddr: `${item.mapName} ${parseHouseNum(item.house)} Warszawa`,
     basket: item.basket
   }));
@@ -610,7 +610,7 @@ function makeRoute() {
     let rangeLabel = basketLabel[firstBasket];
     if (lastBasket !== firstBasket) rangeLabel += " → " + basketLabel[lastBasket];
 
-    const addrList = chunk.map(a => a.label).join(", ");
+    const addrList = chunk.map((a, n) => `<span style="display:block">${n+1}. ${a.label}</span>`).join("");
 
     const a = document.createElement("a");
     a.className = "route-pack";
