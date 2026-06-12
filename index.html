@@ -130,7 +130,14 @@ function render(){
   el.innerHTML = "";
 
   data.forEach((d,i)=>{
-    el.innerHTML += `<div>${i+1}. ${d.street} ${d.house} ${d.flat ? "/" + d.flat : ""} — ${d.basket}</div>`;
+    
+let color='';
+let text='';
+if(d.basket===1){color='green';text='1 крата';}
+if(d.basket===2){color='orange';text='2 крата';}
+if(d.basket===3){color='red';text='3 крата';}
+el.innerHTML += `<div>${i+1}. ${d.street} ${d.house} ${d.flat ? "/" + d.flat : ""} — <span style="color:${color}">${text}</span></div>`;
+
   });
 }
 
