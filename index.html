@@ -8,28 +8,33 @@
 body {
   font-family: Arial;
   margin: 10px;
-  background: #4b0f16;
+  background: #2f2f2f;
   color: #fff;
 }
 
 /* header */
 .header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  align-items: center;
 }
 
-.header-text {
+/* right block */
+.header-right {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.header-right h2 {
+  margin: 0;
 }
 
 /* image */
 .header img {
   width: 90px;
   height: auto;
-  object-fit: contain;
 }
 
 /* inputs */
@@ -43,19 +48,23 @@ input {
   border: none;
 }
 
-/* buttons */
+/* buttons centered */
+.button-wrap {
+  display: flex;
+  justify-content: center;
+}
+
 button {
   font-size: 16px;
   padding: 10px;
   margin: 5px 0;
   width: 60%;
-  box-sizing: border-box;
   border-radius: 6px;
   border: none;
   cursor: pointer;
 }
 
-/* specific buttons */
+/* colors */
 .btn-green {
   background: #1f8f3a;
   color: white;
@@ -66,10 +75,11 @@ button {
   color: white;
 }
 
+/* boxes */
 .box {
   margin-top: 10px;
   padding: 10px;
-  border: 1px solid #aaa;
+  border: 1px solid #777;
   background: rgba(255,255,255,0.05);
 }
 
@@ -89,12 +99,13 @@ button {
 <body>
 
 <div class="header">
-  <div class="header-text">
+  <div></div>
+
+  <div class="header-right">
     <h2>DPD-Opti</h2>
-    <h3>Оптимизация</h3>
+    <img src="DPD_im.PNG" alt="DPD">
   </div>
-  <img src="DPD_im.PNG" alt="DPD">
-</div>  
+</div> 
 
 <input id="search" placeholder="Улица (например: ozar, gorcz, ciol...)" oninput="searchStreet()">
 <div id="streetList"></div>
@@ -106,11 +117,16 @@ button {
 <input id="house" placeholder="Дом">
 <input id="flat" placeholder="Квартира (необязательно)">
 
-<button class="btn-gray" onclick="addAddress()">Добавить</button>
+<div class="button-wrap">
+  <button class="btn-gray" onclick="addAddress()">Добавить</button>
 </div>
 
-<button class="btn-green" onclick="makeRoute()">Построить маршрут</button>
-<button class="btn-gray" onclick="clearAll()">Очистить</button>
+<div class="button-wrap">
+  <button class="btn-green" onclick="makeRoute()">Построить маршрут</button>
+</div>
+<div class="button-wrap">
+  <button class="btn-gray" onclick="clearAll()">Очистить</button>
+</div>
   
 <h3>Список</h3>
 <div id="list"></div>
